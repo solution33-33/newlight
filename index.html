@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Xcode Elite Edition</title>
+<style>
+:root{
+  --bg:#0a0e1a; --card:#0f1729; --input:#1a2237; --border:#1e293b;
+  --text:#e5e7eb; --muted:#94a3b8; --accent:#10b981; --accent-h:#059669;
+  --danger:#ef4444; --warning:#f59e0b; --success:#22c55e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);font-size:14px;overflow:hidden}
+.hidden{display:none!important}
+button{cursor:pointer;font-family:inherit;font-size:.85rem;padding:8px 14px;border-radius:6px;
+  border:1px solid var(--accent);background:var(--accent);color:#fff;transition:.15s}
+button:hover{background:var(--accent-h);border-color:var(--accent-h)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.secondary{background:var(--input);border-color:var(--border);color:var(--text)}
+button.secondary:hover{background:var(--border)}
+button.danger{background:var(--danger);border-color:var(--danger)}
+button.danger:hover{background:#dc2626}
+button.small{font-size:.75rem;padding:4px 10px}
+input,select,textarea{font-family:inherit;font-size:.85rem;padding:8px 12px;border-radius:6px;
+  background:var(--input);border:1px solid var(--border);color:var(--text);width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+textarea{resize:vertical;min-height:80px;font-family:ui-monospace,Menlo,monospace}
+label{display:block;font-size:.75rem;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.03em}
+.field{margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px}
+.card h3{margin-bottom:12px;color:var(--accent);font-size:.95rem;font-weight:600}
+.muted{color:var(--muted);font-size:.78rem}
+
+/* Connect screen */
+#connecting{position:fixed;inset:0;background:var(--bg);z-index:2000;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;color:var(--muted)}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#connBanner{position:fixed;top:0;left:0;right:0;padding:6px 14px;font-size:.78rem;
+  background:var(--warning);color:#000;text-align:center;font-weight:600;display:none;z-index:1500}
+#connBanner.active{display:block}
+
+/* Activation */
+#activationScreen{position:fixed;inset:0;background:var(--bg);z-index:1000;
+  display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.activation-card{max-width:640px;width:100%;background:var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.activation-card h1{color:var(--accent);margin-bottom:6px;font-size:1.4rem}
+.activation-card p{color:var(--muted);margin-bottom:18px;font-size:.85rem;line-height:1.5}
+.activation-card textarea{font-size:.72rem;min-height:120px;word-break:break-all;background:#050810}
+#activationStatus{margin-top:14px;font-size:.85rem;min-height:20px}
+#activationStatus.ok{color:var(--success)}
+#activationStatus.err{color:var(--danger)}
+
+/* Layout */
+#appScreen{display:flex;height:100vh}
+.sidebar{width:230px;background:var(--card);border-right:1px solid var(--border);
+  padding:16px 10px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;overflow-y:auto}
+.sidebar .logo{font-size:1.05rem;font-weight:700;color:var(--accent);padding:8px 12px 16px;
+  border-bottom:1px solid var(--border);margin-bottom:10px}
+.sidebar button{background:transparent;border:none;color:var(--muted);text-align:left;
+  padding:10px 14px;border-radius:6px;font-size:.85rem;display:flex;align-items:center;gap:10px}
+.sidebar button:hover{background:rgba(16,185,129,.08);color:var(--text)}
+.sidebar button.active{background:rgba(16,185,129,.15);color:var(--accent);font-weight:600}
+main{flex:1;overflow-y:auto;padding:24px 28px}
+.pane{display:none;animation:fade .15s}
+.pane.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.pane h2{font-size:1.35rem;margin-bottom:6px}
+.pane .subtitle{color:var(--muted);margin-bottom:22px;font-size:.85rem}
+
+.list-item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--input);
+  border:1px solid var(--border);border-radius:8px;margin-bottom:8px;font-size:.85rem}
+.list-item .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list-item .actions{display:flex;gap:6px;flex-shrink:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.stat-card{background:var(--input);border:1px solid var(--border);border-radius:8px;padding:16px}
+.stat-card .num{font-size:1.6rem;font-weight:700;color:var(--accent)}
+.stat-card .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+.result-box{background:#050810;border:1px solid var(--border);border-radius:8px;
+  padding:12px;max-height:400px;overflow-y:auto;font-family:ui-monospace,monospace;
+  font-size:.78rem;line-height:1.7}
+.result-box .ok{color:var(--success)}
+.result-box .bad{color:var(--danger)}
+.result-box .info{color:var(--muted)}
+.flex{display:flex;gap:8px;align-items:center}
+.flex.wrap{flex-wrap:wrap}
+.mt{margin-top:14px}
+
+/* Toasts */
+#toasts{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:8px;
+  z-index:3000;pointer-events:none}
+.toast{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);
+  border-radius:8px;padding:12px 16px;font-size:.85rem;min-width:220px;max-width:400px;
+  box-shadow:0 8px 30px rgba(0,0,0,.6);animation:slideIn .2s;pointer-events:auto}
+.toast.success{border-left-color:var(--success)}
+.toast.error{border-left-color:var(--danger)}
+.toast.info{border-left-color:var(--accent)}
+.toast.hide{opacity:0;transform:translateX(30px);transition:.3s}
+@keyframes slideIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<!-- Connect screen -->
+<div id="connecting">
+  <div class="spinner"></div>
+  <div>Connecting to backend…</div>
+</div>
+
+<!-- Connection lost banner -->
+<div id="connBanner">⟳ Reconnecting to backend…</div>
+
+<!-- Activation screen -->
+<div id="activationScreen" class="hidden">
+  <div class="activation-card">
+    <h1>🔐 Xcode Elite — Activation</h1>
+    <p>Copy the device fingerprint hash below and send it to the activation server administrator. You will receive an activated license keyed to this specific machine. Once activated, this page will not show again.</p>
+    <label>Device fingerprint (SHA-512)</label>
+    <textarea id="activationHash" readonly></textarea>
+    <div class="flex mt">
+      <button id="copyHashBtn">📋 Copy Hash</button>
+      <button id="activateBtn" class="secondary">Activate Now</button>
+    </div>
+    <div id="activationStatus"></div>
+    <p style="margin-top:20px;font-size:.72rem;color:var(--muted)">
+      Activation URL: <span id="activationUrl"></span> · Prefix: <code id="activationPrefix"></code>
+    </p>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="appScreen" class="hidden">
+  <nav class="sidebar">
+    <div class="logo">⚡ Xcode Elite</div>
+    <button data-tab="dashboard" class="active">📊 Dashboard</button>
+    <button data-tab="smtp">📧 SMTP Relays</button>
+    <button data-tab="mta">🛰 MTA Relay</button>
+    <button data-tab="campaigns">🚀 Campaigns</button>
+    <button data-tab="leads">🎯 Leads Check</button>
+    <button data-tab="proxy">🌐 Proxy Checker</button>
+    <button data-tab="sms">📱 SMS API</button>
+    <button data-tab="publicip">🌍 Public IP</button>
+    <button data-tab="about">ℹ️ About</button>
+  </nav>
+
+  <main>
+    <section class="pane active" data-pane="dashboard">
+      <h2>Dashboard</h2>
+      <p class="subtitle">Live system overview</p>
+      <div class="grid">
+        <div class="stat-card"><div class="num" id="dashSmtps">0</div><div class="lbl">SMTP Relays</div></div>
+        <div class="stat-card"><div class="num" id="dashMtas">0</div><div class="lbl">MTA Relays</div></div>
+        <div class="stat-card"><div class="num" id="dashCampaigns">0</div><div class="lbl">Campaigns</div></div>
+        <div class="stat-card"><div class="num" id="dashSent">0</div><div class="lbl">Emails Sent</div></div>
+        <div class="stat-card"><div class="num" id="dashFailed">0</div><div class="lbl">Emails Failed</div></div>
+        <div class="stat-card"><div class="num" id="dashSms">0</div><div class="lbl">SMS Providers</div></div>
+      </div>
+      <div class="card mt">
+        <h3>Recent Campaign Activity</h3>
+        <div id="dashRecent" class="result-box"><div class="info">No campaigns yet.</div></div>
+      </div>
+    </section>
+
+    <section class="pane" data-pane="smtp">
+      <h2>SMTP Relays</h2>
+      <p class="subtitle">Outbound SMTP accounts used by campaigns</p>
+      <div class="card">
+        <h3>➕ Add SMTP Relay</h3>
+        <div class="field"><label>Label</label><input id="smtpLabel" placeholder="My SMTP"></div>
+        <div class="flex wrap">
+          <div class="field" style="flex:3;min-width:220px"><label>Host</label><input id="smtpHost" placeholder="smtp.example.com"></div>
+          <div class="field" style="flex:1;min-width:100px"><label>Port</label><input id="smtpPort" type="number" value="587"></div>
+          <div class="field" style="flex:1;min-width:120px"><label>SSL/TLS</label>
+            <select id="smtpSecure"><option value="true">Yes</option><option value="false">No</option></select>
+          </div>
+        </div>
+        <div class="flex wrap">
+          <div class="field" style="flex:1;min-width:160px"><label>User</label><input id="smtpUser" autocomplete="off"></div>
+          <div class="field" style="flex:1;min-width:160px"><label>Pass</label><input id="smtpPass" type="password" autocomplete="new-password"></div>
+        </div>
+        <div class="flex mt">
+          <button id="smtpAddBtn">Add</button>
+          <button class="secondary" id="smtpTestBtn">Test Connection</button>
+          <span id="smtpStatus" class="muted"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Configured SMTPs</h3>
+        <div id="smtpList"><p class="muted">None yet.</p></div>
+      </div>
+    </section>
+
+    <section class="pane" data-pane="mta">
+      <h2>MTA Relay</h2>
+      <p class="subtitle">Direct-to-MX delivery (port 25). No authentication required.</p>
+      <div class="card">
+        <h3>➕ Add MTA Profile</h3>
+        <div class="flex wrap">
+          <div class="field" style="flex:1;min-width:160px"><label>Name</label><input id="mtaName" placeholder="Direct MX 1"></div>
+          <div class="field" style="flex:1;min-width:160px"><label>From Domain</label><input id="mtaDomain" placeholder="example.com"></div>
+          <div class="field" style="flex:1;min-width:160px"><label>HELO Hostname</label><input id="mtaHelo" placeholder="mail.example.com"></div>
+        </div>
+        <button id="mtaAddBtn" class="mt">Add MTA</button>
+      </div>
+      <div class="card">
+        <h3>MTA Profiles</h3>
+        <div id="mtaList"><p class="muted">None yet.</p></div>
+      </div>
+    </section>
+
+    <section class="pane" data-pane="campaigns">
+      <h2>Campaigns</h2>
+      <p class="subtitle">Compose and launch email campaigns</p>
+      <div class="card">
+        <h3>➕ New Campaign</h3>
+        <div class="flex wrap">
+          <div class="field" style="flex:1;min-width:160px"><label>Name</label><input id="campName" placeholder="Campaign 1"></div>
+          <div class="field" style="flex:1;min-width:120px"><label>Send via</label>
+            <select id="campMode"><option value="smtp">SMTP</option><option value="mta">MTA (MX)</option></select>
+          </div>
+        </div>
+        <div class="flex wrap">
+          <div class="field" style="flex:1;min-width:140px"><label>From Name</label><input id="campFromName"></div>
+          <div class="field" style="flex:1;min-width:140px"><label>From Address</label><input id="campFromAddr" placeholder="sender@example.com"></div>
+        </div>
+        <div class="field"><label>Subject</label><input id="campSubject"></div>
+        <div class="field"><label>Body (HTML allowed)</label><textarea id="campBody" rows="5"></textarea></div>
+        <div class="field"><label>Leads (one email per line)</label><textarea id="campLeads" rows="6"></textarea></div>
+        <div class="field"><label>SMTPs to use</label><div id="campSmtpSelect" class="flex wrap"></div></div>
+        <button id="campCreateBtn" class="mt">Create Campaign</button>
+        <span id="campStatus" class="muted"></span>
+      </div>
+      <div class="card">
+        <h3>Campaigns</h3>
+        <div id="campList"><p class="muted">None yet.</p></div>
+      </div>
+    </section>
+
+    <section class="pane" data-pane="leads">
+      <h2>Leeds Check</h2>
+      <p class="subtitle">Validate emails — format, domain syntax, MX record presence</p>
+      <div class="card">
+        <div class="field"><label>Emails (one per line)</label><textarea id="leadsInput" rows="8" placeholder="alice@example.com&#10;bob@example.org"></textarea></div>
+        <div class="flex">
+          <button id="leadsCheckBtn">Check Leads</button>
+          <button class="secondary" id="leadsClearBtn">Clear Results</button>
+          <span id="leadsInfo" class="muted"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Results</h3>
+        <div id="leadsResults" class="result-box" style="max-height:460px"><div class="info">No results yet.</div></div>
+        <div class="flex mt">
+          <span class="muted" id="leadsStats"></span>
+          <button class="secondary small" id="leadsCopyBtn">Copy Valid Emails</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="pane" data-pane="proxy">
+      <h2>Proxy Checker</h2>
+      <p class="subtitle">Test proxy connectivity (via ipify)</p>
+      <div class="card">
+        <div class="field"><label>Proxies (one per line — http://, https://, socks5://)</label>
+          <textarea id="proxyInput" rows="8" placeholder="http://user:pass@host:port"></textarea></div>
+        <div class="flex">
+          <button id="proxyCheckBtn">Check Proxies</button>
+          <button class="secondary" id="proxyClearBtn">Clear Results</button>
+          <span id="proxyInfo" class="muted"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Results</h3>
+        <div id="proxyResults" class="result-box" style="max-height:460px"><div class="info">No results yet.</div></div>
+        <div class="flex mt">
+          <span class="muted" id="proxyStats"></span>
+          <button class="secondary small" id="proxyCopyBtn">Copy Live Proxies</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="pane" data-pane="sms">
+      <h2>SMS API</h2>
+      <p class="subtitle">Configure Twilio or Vonage and send SMS</p>
+      <div class="card">
+        <h3>➕ Add SMS Provider</h3>
+        <div class="flex wrap">
+          <div class="field" style="flex:1;min-width:140px"><label>Provider</label>
+            <select id="smsKind"><option value="twilio">Twilio</option><option value="vonage">Vonage</option></select>
+          </div>
+          <div class="field" style="flex:2;min-width:180px"><label>Label</label><input id="smsLabel" placeholder="Primary"></div>
+        </div>
+        <div id="smsConfigFields"></div>
+        <button id="smsAddBtn" class="mt">Add Provider</button>
+      </div>
+      <div class="card">
+        <h3>Providers</h3>
+        <div id="smsList"><p class="muted">None yet.</p></div>
+      </div>
+      <div class="card">
+        <h3>Send SMS</h3>
+        <div class="flex wrap">
+          <div class="field" style="flex:1;min-width:180px"><label>Provider</label><select id="smsSendProvider"></select></div>
+          <div class="field" style="flex:1;min-width:140px"><label>To</label><input id="smsTo" placeholder="+1234567890"></div>
+        </div>
+        <div class="field"><label>Message</label><textarea id="smsText" rows="3"></textarea></div>
+        <button id="smsSendBtn">Send SMS</button>
+        <div id="smsSendResult" class="mt muted"></div>
+      </div>
+    </section>
+
+    <section class="pane" data-pane="publicip">
+      <h2>Public IP</h2>
+      <p class="subtitle">Detect your current public IPv4 address</p>
+      <div class="card">
+        <button id="publicIpBtn">Fetch My Public IP</button>
+        <div id="publicIpResult" style="margin-top:16px;font-size:1.2rem;font-family:ui-monospace,monospace">
+          <span class="muted">Click to detect…</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="pane" data-pane="about">
+      <h2>About Xcode Elite</h2>
+      <p class="subtitle">Detailed application information</p>
+      <div class="card"><h3>Version</h3><div id="aboutVersion" class="muted">Loading…</div></div>
+      <div class="card"><h3>Features</h3><ul id="aboutFeatures" style="padding-left:20px;line-height:1.9"></ul></div>
+      <div class="card">
+        <h3>Device</h3>
+        <div class="field"><label>SHA-512 device fingerprint</label>
+          <textarea id="aboutHash" readonly style="min-height:80px;font-size:.7rem"></textarea></div>
+        <div class="field"><label>Activation prefix</label><input id="aboutPrefix" readonly></div>
+        <div class="field"><label>Activation URL</label><input id="aboutActUrl" readonly></div>
+        <div class="field"><label>Status</label><input id="aboutActivated" readonly></div>
+      </div>
+      <div class="card">
+        <h3>Technical</h3>
+        <p class="muted" style="line-height:1.8">
+          Frontend: HTML/CSS/JS. Transport: <strong>WebSocket</strong> to <code>127.0.0.1:7777</code>.<br>
+          Backend: Rust + wry + axum. Persistence: JSON at <code>~/.config/xcode-elite/state.json</code>.<br>
+          Realtime: all state changes are broadcast live to every connected client.<br>
+          Activation: SHA-512 of 10 system identifiers, verified against an external URL on every start.
+        </p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+// ==========================================================================
+// WebSocket transport
+// ==========================================================================
+let ws = null;
+let wsReady = false;
+let reqSeq = 0;
+const pending = new Map();   // id → {resolve, reject}
+let reconnectDelay = 500;
+
+function wsConnect() {
+  const url = `ws://${location.host}/ws`;
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    wsReady = true;
+    reconnectDelay = 500;
+    document.getElementById('connecting').classList.add('hidden');
+    document.getElementById('connBanner').classList.remove('active');
+  };
+  ws.onclose = () => {
+    wsReady = false;
+    document.getElementById('connBanner').classList.add('active');
+    // Reject any pending requests
+    for (const {reject} of pending.values()) reject('disconnected');
+    pending.clear();
+    setTimeout(wsConnect, reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 1.6, 5000);
+  };
+  ws.onerror = () => { /* onclose will fire */ };
+  ws.onmessage = (e) => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { return; }
+    if (msg.id && pending.has(msg.id)) {
+      const {resolve, reject} = pending.get(msg.id);
+      pending.delete(msg.id);
+      msg.ok ? resolve(msg.result) : reject(msg.error || 'request failed');
+    } else {
+      handleEvent(msg);
+    }
+  };
+}
+
+/** Send a command and await its response. */
+function cmd(name, payload) {
+  return new Promise((resolve, reject) => {
+    if (!wsReady || ws.readyState !== WebSocket.OPEN) {
+      return reject('not connected');
+    }
+    const id = 'r' + (++reqSeq);
+    pending.set(id, {resolve, reject});
+    ws.send(JSON.stringify({ id, cmd: name, payload: payload || {} }));
+  });
+}
+
+// ==========================================================================
+// State — mutated by init and by push events only (no polling)
+// ==========================================================================
+let currentState = {
+  smtps: [], mtas: [], campaigns: [], sms: [],
+  lead_results: [], proxy_results: [],
+  checking_leads: false, checking_proxies: false
+};
+let lastSeq = 0;
+let activationInfo = null;
+
+// ==========================================================================
+// Push event handling
+// ==========================================================================
+function handleEvent(evt) {
+  switch (evt.event) {
+    case 'init': {
+      activationInfo = evt;
+      if (!evt.activated) {
+        showActivationScreen(evt);
+      } else {
+        lastSeq = evt.seq || 0;
+        currentState = evt.state || currentState;
+        enterApp();
+      }
+      break;
+    }
+    case 'activated': {
+      // Server confirmed activation; immediately move to the app view.
+      enterApp();
+      break;
+    }
+    case 'state': {
+      if (typeof evt.seq === 'number' && evt.seq <= lastSeq) return;
+      if (typeof evt.seq === 'number') lastSeq = evt.seq;
+      currentState = evt.state || currentState;
+      rerenderAll();
+      break;
+    }
+    case 'campaign': {
+      const idx = (currentState.campaigns || []).findIndex(c => c.id === evt.campaign.id);
+      if (idx >= 0) currentState.campaigns[idx] = evt.campaign;
+      else (currentState.campaigns = currentState.campaigns || []).push(evt.campaign);
+      renderCampaigns();
+      renderDashboard();
+      break;
+    }
+    case 'lead': {
+      (currentState.lead_results = currentState.lead_results || []).push(evt.result);
+      renderLeads();
+      break;
+    }
+    case 'proxy': {
+      (currentState.proxy_results = currentState.proxy_results || []).push(evt.result);
+      renderProxy();
+      break;
+    }
+    case 'checking': {
+      if (evt.kind === 'lead') { currentState.checking_leads = !!evt.value; renderLeads(); }
+      else if (evt.kind === 'proxy') { currentState.checking_proxies = !!evt.value; renderProxy(); }
+      break;
+    }
+    case 'toast': {
+      showToast(evt.level || 'info', evt.message || '');
+      break;
+    }
+  }
+}
+
+// ==========================================================================
+// Screens
+// ==========================================================================
+function showActivationScreen(info) {
+  document.getElementById('connecting').classList.add('hidden');
+  document.getElementById('appScreen').classList.add('hidden');
+  document.getElementById('activationScreen').classList.remove('hidden');
+  document.getElementById('activationHash').value = info.hash || '';
+  document.getElementById('activationPrefix').textContent = info.prefix || '';
+  document.getElementById('activationUrl').textContent = info.activation_url || '';
+  document.getElementById('copyHashBtn').onclick = () => {
+    navigator.clipboard.writeText(info.hash || '');
+    const st = document.getElementById('activationStatus');
+    st.textContent = 'Copied to clipboard ✓';
+    st.className = 'ok';
+  };
+  document.getElementById('activateBtn').onclick = async () => {
+    const btn = document.getElementById('activateBtn');
+    const st = document.getElementById('activationStatus');
+    btn.disabled = true;
+    st.className = '';
+    st.textContent = 'Contacting activation server…';
+    try {
+      const r = await cmd('activate');
+      if (r.activated) {
+        st.textContent = '✓ Activated!';
+        st.className = 'ok';
+        // 'activated' event will switch to app view
+      } else {
+        st.textContent = '✗ Not activated. Server did not return the expected hash.';
+        st.className = 'err';
+        btn.disabled = false;
+      }
+    } catch (e) {
+      st.textContent = '✗ ' + e;
+      st.className = 'err';
+      btn.disabled = false;
+    }
+  };
+}
+
+function enterApp() {
+  if (document.getElementById('appScreen').classList.contains('hidden')) {
+    document.getElementById('activationScreen').classList.add('hidden');
+    document.getElementById('appScreen').classList.remove('hidden');
+    bindTabs();
+    bindAll();
+    loadAbout();
+  }
+  rerenderAll();
+}
+
+// ==========================================================================
+// Tabs
+// ==========================================================================
+function bindTabs() {
+  document.querySelectorAll('.sidebar button[data-tab]').forEach(btn => {
+    btn.onclick = () => switchTab(btn.dataset.tab);
+  });
+}
+function switchTab(name) {
+  document.querySelectorAll('.sidebar button[data-tab]').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.pane').forEach(p =>
+    p.classList.toggle('active', p.dataset.pane === name));
+}
+
+// ==========================================================================
+// Render all (from a full state snapshot)
+// ==========================================================================
+function rerenderAll() {
+  renderDashboard();
+  renderSmtpList();
+  renderMtaList();
+  renderCampSmtpSelect();
+  renderCampaigns();
+  renderLeads();
+  renderProxy();
+  renderSmsList();
+  renderSmsDropdown();
+}
+
+// ==========================================================================
+// Binders
+// ==========================================================================
+function bindAll() {
+  document.getElementById('smtpAddBtn').onclick = addSmtp;
+  document.getElementById('smtpTestBtn').onclick = async () => {
+    const host = document.getElementById('smtpHost').value.trim();
+    const port = parseInt(document.getElementById('smtpPort').value) || 587;
+    if (!host) return;
+    const st = document.getElementById('smtpStatus');
+    st.textContent = 'Testing…';
+    try {
+      const r = await cmd('smtp.test', { host, port });
+      st.textContent = r.ok ? '✓ ' + (r.banner || 'OK') : '✗ ' + (r.error || 'fail');
+      st.style.color = r.ok ? 'var(--success)' : 'var(--danger)';
+    } catch (e) {
+      st.textContent = '✗ ' + e;
+      st.style.color = 'var(--danger)';
+    }
+  };
+  document.getElementById('mtaAddBtn').onclick = addMta;
+  document.getElementById('campCreateBtn').onclick = createCampaign;
+  document.getElementById('leadsCheckBtn').onclick = checkLeads;
+  document.getElementById('leadsClearBtn').onclick = () => cmd('leads.clear').catch(() => {});
+  document.getElementById('leadsCopyBtn').onclick = () => {
+    const valid = (currentState.lead_results || []).filter(r => r.valid).map(r => r.email).join('\n');
+    if (valid) { navigator.clipboard.writeText(valid); showToast('success', 'Copied ' + valid.split('\n').length + ' valid emails'); }
+  };
+  document.getElementById('proxyCheckBtn').onclick = checkProxies;
+  document.getElementById('proxyClearBtn').onclick = () => cmd('proxy.clear').catch(() => {});
+  document.getElementById('proxyCopyBtn').onclick = () => {
+    const live = (currentState.proxy_results || []).filter(r => r.live).map(r => r.proxy).join('\n');
+    if (live) { navigator.clipboard.writeText(live); showToast('success', 'Copied ' + live.split('\n').length + ' live proxies'); }
+  };
+  document.getElementById('smsKind').onchange = renderSmsConfigFields;
+  document.getElementById('smsAddBtn').onclick = addSms;
+  document.getElementById('smsSendBtn').onclick = sendSms;
+  renderSmsConfigFields();
+  document.getElementById('publicIpBtn').onclick = fetchPublicIp;
+}
+
+// ==========================================================================
+// Dashboard
+// ==========================================================================
+function renderDashboard() {
+  const s = currentState;
+  const totalSent = (s.campaigns || []).reduce((a, c) => a + (c.sent || 0), 0);
+  const totalFailed = (s.campaigns || []).reduce((a, c) => a + (c.failed || 0), 0);
+  document.getElementById('dashSmtps').textContent = (s.smtps || []).length;
+  document.getElementById('dashMtas').textContent = (s.mtas || []).length;
+  document.getElementById('dashCampaigns').textContent = (s.campaigns || []).length;
+  document.getElementById('dashSent').textContent = totalSent;
+  document.getElementById('dashFailed').textContent = totalFailed;
+  document.getElementById('dashSms').textContent = (s.sms || []).length;
+  const recent = (s.campaigns || []).slice(-5).reverse();
+  const el = document.getElementById('dashRecent');
+  if (!recent.length) { el.innerHTML = '<div class="info">No campaigns yet.</div>'; return; }
+  el.innerHTML = recent.map(c => {
+    const cls = c.status === 'done' ? 'ok' : c.status === 'sending' ? '' : 'info';
+    return `<div><span class="${cls}">[${esc(c.status)}]</span> <strong>${esc(c.name)}</strong> — ${c.sent}/${c.total} sent, ${c.failed} failed</div>`;
+  }).join('');
+}
+
+// ==========================================================================
+// SMTP
+// ==========================================================================
+async function addSmtp() {
+  const st = document.getElementById('smtpStatus');
+  const payload = {
+    label: document.getElementById('smtpLabel').value || 'SMTP',
+    host: document.getElementById('smtpHost').value.trim(),
+    port: parseInt(document.getElementById('smtpPort').value) || 587,
+    user: document.getElementById('smtpUser').value,
+    pass: document.getElementById('smtpPass').value,
+    secure: document.getElementById('smtpSecure').value === 'true',
+  };
+  if (!payload.host) { st.textContent = 'Host required'; st.style.color = 'var(--danger)'; return; }
+  try {
+    await cmd('smtp.add', payload);
+    st.textContent = '✓ Added';
+    st.style.color = 'var(--success)';
+    ['smtpLabel','smtpHost','smtpUser','smtpPass'].forEach(id => document.getElementById(id).value = '');
+  } catch (e) {
+    st.textContent = '✗ ' + e;
+    st.style.color = 'var(--danger)';
+  }
+}
+
+function renderSmtpList() {
+  const el = document.getElementById('smtpList');
+  const list = currentState.smtps || [];
+  if (!list.length) { el.innerHTML = '<p class="muted">None yet.</p>'; return; }
+  el.innerHTML = list.map(s => `
+    <div class="list-item">
+      <div class="grow"><strong>${esc(s.label)}</strong> — ${esc(s.host)}:${s.port} ${s.secure ? '🔒' : ''} <span class="muted">(${esc(s.user || 'anon')})</span></div>
+      <div class="actions">
+        <button class="secondary small" data-test="${esc(s.id)}">Test</button>
+        <button class="danger small" data-del="${esc(s.id)}">Delete</button>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (!confirm('Delete SMTP?')) return;
+    try { await cmd('smtp.delete', { id: b.dataset.del }); } catch (e) { showToast('error', e); }
+  });
+  el.querySelectorAll('[data-test]').forEach(b => b.onclick = async () => {
+    b.textContent = '…';
+    try {
+      const r = await cmd('smtp.test_stored', { id: b.dataset.test });
+      showToast(r.ok ? 'success' : 'error', r.ok ? '✓ ' + (r.banner || 'OK') : '✗ ' + (r.error || 'fail'));
+    } catch (e) { showToast('error', e); }
+    b.textContent = 'Test';
+  });
+}
+
+// ==========================================================================
+// MTA
+// ==========================================================================
+async function addMta() {
+  try {
+    await cmd('mta.add', {
+      name: document.getElementById('mtaName').value || 'MTA',
+      from_domain: document.getElementById('mtaDomain').value,
+      helo_hostname: document.getElementById('mtaHelo').value || 'xcode-elite',
+    });
+    ['mtaName','mtaDomain','mtaHelo'].forEach(id => document.getElementById(id).value = '');
+  } catch (e) { showToast('error', e); }
+}
+
+function renderMtaList() {
+  const el = document.getElementById('mtaList');
+  const list = currentState.mtas || [];
+  if (!list.length) { el.innerHTML = '<p class="muted">None yet.</p>'; return; }
+  el.innerHTML = list.map(m => `
+    <div class="list-item">
+      <div class="grow"><strong>${esc(m.name)}</strong> — from <code>${esc(m.from_domain || '?')}</code>, HELO <code>${esc(m.helo_hostname || '?')}</code></div>
+      <div class="actions"><button class="danger small" data-del="${esc(m.id)}">Delete</button></div>
+    </div>`).join('');
+  el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (!confirm('Delete MTA?')) return;
+    try { await cmd('mta.delete', { id: b.dataset.del }); } catch (e) { showToast('error', e); }
+  });
+}
+
+// ==========================================================================
+// Campaigns
+// ==========================================================================
+function renderCampSmtpSelect() {
+  const el = document.getElementById('campSmtpSelect');
+  const list = currentState.smtps || [];
+  if (!list.length) { el.innerHTML = '<span class="muted">Add SMTPs first.</span>'; return; }
+  const existing = new Set(Array.from(el.querySelectorAll('input:checked')).map(c => c.dataset.smtpid));
+  el.innerHTML = list.map(s => `
+    <label class="flex" style="gap:6px;cursor:pointer;color:var(--text)">
+      <input type="checkbox" data-smtpid="${esc(s.id)}" ${existing.has(s.id) ? 'checked' : ''}>
+      <span>${esc(s.label)} (${esc(s.host)})</span>
+    </label>`).join('');
+}
+
+async function createCampaign() {
+  const leads = document.getElementById('campLeads').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const smtp_ids = Array.from(document.querySelectorAll('#campSmtpSelect input:checked')).map(c => c.dataset.smtpid);
+  const st = document.getElementById('campStatus');
+  if (!leads.length) { st.textContent = 'Add leads'; st.style.color = 'var(--danger)'; return; }
+  try {
+    await cmd('campaign.create', {
+      name: document.getElementById('campName').value || 'Campaign',
+      subject: document.getElementById('campSubject').value,
+      from_name: document.getElementById('campFromName').value,
+      from_addr: document.getElementById('campFromAddr').value,
+      body: document.getElementById('campBody').value,
+      leads, smtp_ids,
+      mta_mode: document.getElementById('campMode').value === 'mta',
+    });
+    st.textContent = '✓ Created';
+    st.style.color = 'var(--success)';
+    ['campName','campSubject','campFromAddr','campFromName','campBody','campLeads'].forEach(id => document.getElementById(id).value = '');
+  } catch (e) {
+    st.textContent = '✗ ' + e;
+    st.style.color = 'var(--danger)';
+  }
+}
+
+function renderCampaigns() {
+  const el = document.getElementById('campList');
+  const list = currentState.campaigns || [];
+  if (!list.length) { el.innerHTML = '<p class="muted">None yet.</p>'; return; }
+  el.innerHTML = list.slice().reverse().map(c => {
+    const pct = c.total ? Math.round(((c.sent + c.failed) / c.total) * 100) : 0;
+    const statusColor = c.status === 'done' ? 'var(--success)' : c.status === 'sending' ? 'var(--accent)' : c.status === 'paused' ? 'var(--warning)' : 'var(--muted)';
+    return `
+    <div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px">
+      <div class="flex wrap">
+        <div class="grow"><strong>${esc(c.name)}</strong> — <span style="color:${statusColor};font-weight:600">${esc(c.status)}</span>
+          <span class="muted">· ${c.mta_mode ? 'MTA' : 'SMTP'} · ${c.sent}/${c.total} sent · ${c.failed} failed</span></div>
+        <div class="actions">
+          ${c.status === 'idle' || c.status === 'paused' ? `<button class="small" data-start="${esc(c.id)}">${c.status === 'paused' ? 'Resume' : 'Start'}</button>` : ''}
+          ${c.status === 'sending' ? `<button class="secondary small" data-pause="${esc(c.id)}">Pause</button>` : ''}
+          <button class="danger small" data-del="${esc(c.id)}">Delete</button>
+        </div>
+      </div>
+      <div style="height:4px;background:var(--input);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${statusColor};transition:.3s"></div>
+      </div>
+      ${c.log && c.log.length ? `<div class="result-box" style="max-height:100px;margin-top:4px">${c.log.slice(-5).map(l => `<div>${esc(l)}</div>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+  el.querySelectorAll('[data-start]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try { await cmd('campaign.start', { id: b.dataset.start }); }
+    catch (e) { showToast('error', e); b.disabled = false; }
+  });
+  el.querySelectorAll('[data-pause]').forEach(b => b.onclick = () => cmd('campaign.pause', { id: b.dataset.pause }).catch(e => showToast('error', e)));
+  el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (!confirm('Delete campaign?')) return;
+    try { await cmd('campaign.delete', { id: b.dataset.del }); } catch (e) { showToast('error', e); }
+  });
+}
+
+// ==========================================================================
+// Leads
+// ==========================================================================
+async function checkLeads() {
+  const emails = document.getElementById('leadsInput').value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (!emails.length) return;
+  document.getElementById('leadsInfo').textContent = 'Starting…';
+  try {
+    const r = await cmd('leads.check', { emails });
+    document.getElementById('leadsInfo').textContent = `Checking ${r.total} emails…`;
+  } catch (e) { document.getElementById('leadsInfo').textContent = '✗ ' + e; }
+}
+
+function renderLeads() {
+  const el = document.getElementById('leadsResults');
+  const results = currentState.lead_results || [];
+  document.getElementById('leadsInfo').textContent = currentState.checking_leads ? 'Checking…' : '';
+  if (!results.length) {
+    el.innerHTML = '<div class="info">No results yet.</div>';
+    document.getElementById('leadsStats').textContent = '';
+    return;
+  }
+  const valid = results.filter(r => r.valid).length;
+  document.getElementById('leadsStats').textContent = `${valid} valid · ${results.length - valid} invalid · ${results.length} total`;
+  el.innerHTML = results.map(r =>
+    `<div><span class="${r.valid ? 'ok' : 'bad'}">[${r.valid ? 'OK' : 'BAD'}]</span> ${esc(r.email)} <span class="info">— ${esc(r.reason)}</span></div>`
+  ).join('');
+}
+
+// ==========================================================================
+// Proxy
+// ==========================================================================
+async function checkProxies() {
+  const proxies = document.getElementById('proxyInput').value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (!proxies.length) return;
+  document.getElementById('proxyInfo').textContent = 'Starting…';
+  try {
+    const r = await cmd('proxy.check', { proxies });
+    document.getElementById('proxyInfo').textContent = `Checking ${r.total} proxies…`;
+  } catch (e) { document.getElementById('proxyInfo').textContent = '✗ ' + e; }
+}
+
+function renderProxy() {
+  const el = document.getElementById('proxyResults');
+  const results = currentState.proxy_results || [];
+  document.getElementById('proxyInfo').textContent = currentState.checking_proxies ? 'Checking…' : '';
+  if (!results.length) {
+    el.innerHTML = '<div class="info">No results yet.</div>';
+    document.getElementById('proxyStats').textContent = '';
+    return;
+  }
+  const live = results.filter(r => r.live).length;
+  document.getElementById('proxyStats').textContent = `${live} live · ${results.length - live} dead · ${results.length} total`;
+  el.innerHTML = results.map(r =>
+    `<div><span class="${r.live ? 'ok' : 'bad'}">[${r.live ? 'LIVE' : 'DEAD'}]</span> ${esc(r.proxy)} ${r.live ? `<span class="info">(${r.latency_ms}ms)</span>` : ''}</div>`
+  ).join('');
+}
+
+// ==========================================================================
+// SMS
+// ==========================================================================
+function renderSmsConfigFields() {
+  const kind = document.getElementById('smsKind').value;
+  const el = document.getElementById('smsConfigFields');
+  const fields = kind === 'twilio'
+    ? [{ n: 'account_sid', l: 'Account SID' }, { n: 'auth_token', l: 'Auth Token', p: true }, { n: 'from', l: 'From Number' }]
+    : [{ n: 'api_key', l: 'API Key' }, { n: 'api_secret', l: 'API Secret', p: true }, { n: 'from', l: 'From' }];
+  el.innerHTML = fields.map(f => `<div class="field"><label>${f.l}</label><input data-cfg="${f.n}" type="${f.p ? 'password' : 'text'}"></div>`).join('');
+}
+
+async function addSms() {
+  const kind = document.getElementById('smsKind').value;
+  const config = {};
+  document.querySelectorAll('#smsConfigFields [data-cfg]').forEach(i => config[i.dataset.cfg] = i.value);
+  try {
+    await cmd('sms.add', { kind, label: document.getElementById('smsLabel').value || 'SMS', config });
+    document.getElementById('smsLabel').value = '';
+  } catch (e) { showToast('error', e); }
+}
+
+function renderSmsList() {
+  const el = document.getElementById('smsList');
+  const list = currentState.sms || [];
+  if (!list.length) { el.innerHTML = '<p class="muted">None yet.</p>'; return; }
+  el.innerHTML = list.map(p => `
+    <div class="list-item">
+      <div class="grow"><strong>${esc(p.label)}</strong> — ${esc(p.kind)}</div>
+      <div class="actions"><button class="danger small" data-del="${esc(p.id)}">Delete</button></div>
+    </div>`).join('');
+  el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (!confirm('Delete provider?')) return;
+    try { await cmd('sms.delete', { id: b.dataset.del }); } catch (e) { showToast('error', e); }
+  });
+}
+
+function renderSmsDropdown() {
+  const sel = document.getElementById('smsSendProvider');
+  const list = currentState.sms || [];
+  const prev = sel.value;
+  sel.innerHTML = list.map(p => `<option value="${esc(p.id)}">${esc(p.label)} (${esc(p.kind)})</option>`).join('');
+  if (prev && list.some(p => p.id === prev)) sel.value = prev;
+}
+
+async function sendSms() {
+  const res = document.getElementById('smsSendResult');
+  res.textContent = 'Sending…';
+  try {
+    const r = await cmd('sms.send', {
+      id: document.getElementById('smsSendProvider').value,
+      to: document.getElementById('smsTo').value.trim(),
+      text: document.getElementById('smsText').value,
+    });
+    res.textContent = r.ok ? '✓ Sent' : '✗ ' + (r.error || 'fail');
+    res.style.color = r.ok ? 'var(--success)' : 'var(--danger)';
+  } catch (e) {
+    res.textContent = '✗ ' + e;
+    res.style.color = 'var(--danger)';
+  }
+}
+
+// ==========================================================================
+// Public IP
+// ==========================================================================
+async function fetchPublicIp() {
+  const el = document.getElementById('publicIpResult');
+  el.innerHTML = '<span class="muted">Fetching…</span>';
+  try {
+    const r = await cmd('publicip');
+    el.innerHTML = r.ip
+      ? `<span style="color:var(--success)">✓</span> <strong>${esc(r.ip)}</strong>`
+      : '<span style="color:var(--danger)">✗ Failed</span>';
+  } catch (e) {
+    el.innerHTML = `<span style="color:var(--danger)">✗ ${esc(e)}</span>`;
+  }
+}
+
+// ==========================================================================
+// About
+// ==========================================================================
+async function loadAbout() {
+  try {
+    const a = await cmd('about');
+    document.getElementById('aboutVersion').textContent = `${a.name} v${a.version} · ${a.engine}`;
+    document.getElementById('aboutFeatures').innerHTML = (a.features || []).map(f => `<li>${esc(f)}</li>`).join('');
+    document.getElementById('aboutHash').value = a.device_hash || '';
+    document.getElementById('aboutPrefix').value = a.device_prefix || '';
+    document.getElementById('aboutActUrl').value = activationInfo?.activation_url || '';
+    document.getElementById('aboutActivated').value = a.activated ? '✓ Activated' : '✗ Not activated';
+  } catch (e) { /* ignore */ }
+}
+
+// ==========================================================================
+// Toasts
+// ==========================================================================
+function showToast(level, message) {
+  const box = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast ' + level;
+  t.textContent = message;
+  box.appendChild(t);
+  setTimeout(() => { t.classList.add('hide'); setTimeout(() => t.remove(), 350); }, 3200);
+}
+
+// ==========================================================================
+// Helpers
+// ==========================================================================
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+  }[m]));
+}
+
+// ==========================================================================
+// Boot: connect
+// ==========================================================================
+wsConnect();
+</script>
+</body>
+</html>
